@@ -1,79 +1,28 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 import { useDebounce } from "./hooks/useDebounce";
-
-const API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY;
-
-interface YouTube {
-  id: { videoId: string };
-  snippet: {
-    title: string;
-    description: string;
-    channelTitle: string;
-    thumbnails: {
-      medium: { url: string };
-    };
-  };
-}
+import Input from "./components/Input";
+import { useYouTubeFetch } from "./hooks/useYouTubeFetch";
 
 function App() {
-  const [data, setData] = useState<YouTube[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<null | string>(null);
   const [inputValue, setInputValue] = useState("");
 
   const debouncedQuery = useDebounce(inputValue, 500);
 
-  const youtubeFetch = async (
-    query: string = "react",
-    signal?: AbortSignal,
-  ) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(
-        `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&maxResults=30&key=${API_KEY}`,
-        { signal },
-      );
-      if (!res.ok) throw new Error("Помилка при запиті");
-      const json = await res.json();
-      setData(json.items);
-    } catch (err: unknown) {
-      if (err instanceof DOMException && err.name === "AbortError") return;
-      setError(err instanceof Error ? err.message : "Невідома помилка");
-    } finally {
-      setIsLoading(false);
-    }
+  const { data, error, isLoading } = useYouTubeFetch(
+    debouncedQuery || "low quality memes",
+  );
+
+  const handleInputChange = (value: string) => {
+    setInputValue(value);
   };
-
-  // Початковий запит при першому рендері.
-  useEffect(() => {
-    youtubeFetch();
-  }, []);
-
-  // Запит при зміні debouncedQuery(при друку) -> deboQ змінюється -> new controller ->cont.signal to fetch -> query.
-  useEffect(() => {
-    if (!debouncedQuery) return;
-
-    const controller = new AbortController();
-    youtubeFetch(debouncedQuery, controller.signal);
-
-    return () => {
-      controller.abort();
-    };
-  }, [debouncedQuery]);
 
   if (error)
     return <p className="bg-red-500 rounded-2xl text-white">Error: {error}</p>;
 
   return (
     <div className="p-4 max-w-2xl mx-auto">
-      <input
-        className="w-full border rounded p-2 mb-4 bg-white text-black font-semibold"
-        placeholder="search..."
-        value={inputValue}
-        onChange={(e) => setInputValue(e.target.value)}
-      />
+      <Input value={inputValue} onChange={handleInputChange} />
 
       {isLoading && <p className="text-center mb-4">Loading...</p>}
 
