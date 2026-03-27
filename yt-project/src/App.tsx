@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import "./App.css";
+import { useDebounce } from "./hooks/useDebounce";
 
 const API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY;
 
@@ -16,48 +17,44 @@ interface YouTube {
 }
 
 function App() {
-  console.log("Всі змінні:", import.meta.env);
   const [data, setData] = useState<YouTube[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<null | string>(null);
-
   const [inputValue, setInputValue] = useState("");
 
-  const filteredInputSearch = data.filter((item) =>
-    item.snippet.title.toLowerCase().includes(inputValue.toLowerCase()),
-  );
+  const debouncedQuery = useDebounce(inputValue, 500);
 
-  const youtubeFetch = async () => {
+  const youtubeFetch = async (query: string = "react") => {
     setIsLoading(true);
     setError(null);
     try {
       const res = await fetch(
-        `https://www.googleapis.com/youtube/v3/search?part=snippet&q=react&type=video&maxResults=30&key=${API_KEY}`,
+        `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&maxResults=30&key=${API_KEY}`,
       );
-      if (!res.ok) throw new Error("Помилка при запиту");
+      if (!res.ok) throw new Error("Помилка при запиті");
       const json = await res.json();
-      setData(json.items);
       console.log(json);
-    } catch (err: any) {
-      // заглушка any
-      setError(err.message);
-      console.log(err);
+      setData(json.items);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Невідома помилка");
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Початковий запит при першому рендері.
   useEffect(() => {
     youtubeFetch();
   }, []);
 
-  if (isLoading)
-    return <p className="bg-white rounded-2xl text-black">Loading...</p>;
+  // Запит при зміні debouncedQuery(при друку)
+  useEffect(() => {
+    if (!debouncedQuery) return;
+    youtubeFetch(debouncedQuery);
+  }, [debouncedQuery]);
 
   if (error)
-    return (
-      <p className="bg-red-500 rounded-2xl text-white">Error... {error}</p>
-    );
+    return <p className="bg-red-500 rounded-2xl text-white">Error: {error}</p>;
 
   return (
     <div className="p-4 max-w-2xl mx-auto">
@@ -68,10 +65,12 @@ function App() {
         onChange={(e) => setInputValue(e.target.value)}
       />
 
-      {filteredInputSearch.map((item) => (
+      {isLoading && <p className="text-center mb-4">Loading...</p>}
+
+      {data.map((item) => (
         <div
           key={item.id.videoId}
-          className="flex gap-3 border rounded-xl p-3 shadow-sm"
+          className="flex gap-3 border rounded-xl p-3 shadow-sm mb-3"
         >
           <img
             src={item.snippet.thumbnails.medium.url}
