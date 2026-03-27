@@ -24,18 +24,22 @@ function App() {
 
   const debouncedQuery = useDebounce(inputValue, 500);
 
-  const youtubeFetch = async (query: string = "react") => {
+  const youtubeFetch = async (
+    query: string = "react",
+    signal?: AbortSignal,
+  ) => {
     setIsLoading(true);
     setError(null);
     try {
       const res = await fetch(
         `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&maxResults=30&key=${API_KEY}`,
+        { signal },
       );
       if (!res.ok) throw new Error("Помилка при запиті");
       const json = await res.json();
-      console.log(json);
       setData(json.items);
     } catch (err: unknown) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
       setError(err instanceof Error ? err.message : "Невідома помилка");
     } finally {
       setIsLoading(false);
@@ -47,10 +51,16 @@ function App() {
     youtubeFetch();
   }, []);
 
-  // Запит при зміні debouncedQuery(при друку)
+  // Запит при зміні debouncedQuery(при друку) -> deboQ змінюється -> new controller ->cont.signal to fetch -> query.
   useEffect(() => {
     if (!debouncedQuery) return;
-    youtubeFetch(debouncedQuery);
+
+    const controller = new AbortController();
+    youtubeFetch(debouncedQuery, controller.signal);
+
+    return () => {
+      controller.abort();
+    };
   }, [debouncedQuery]);
 
   if (error)
