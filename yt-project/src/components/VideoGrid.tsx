@@ -1,29 +1,14 @@
-import { useYouTubeFetch } from "../hooks/useYouTubeFetch";
+import { memo } from "react";
+import type { YouTube } from "../types/YouTube";
 
 interface VideoGridProps {
-  query: string;
+  items: YouTube[];
 }
 
-export const VideoGrid = ({ query }: VideoGridProps) => {
-  const { data, isLoading, error } = useYouTubeFetch(
-    query || "low quality meme",
-  );
-
-  if (error)
-    return (
-      <p className="bg-red-900/40 border border-red-700 rounded-xl text-red-400 text-sm px-4 py-3">
-        Помилка: {error}
-      </p>
-    );
-
-  if (isLoading)
-    return (
-      <p className="text-center text-[#717171] text-sm py-8">Завантаження...</p>
-    );
-
+export const VideoGrid = memo(({ items }: VideoGridProps) => {
   return (
     <div className="flex flex-col gap-5">
-      {data.map((item) => (
+      {items.map((item) => (
         <div key={item.id.videoId} className="flex gap-4 group" role="listitem">
           <a
             href={`https://www.youtube.com/watch?v=${item.id.videoId}`}
@@ -32,7 +17,7 @@ export const VideoGrid = ({ query }: VideoGridProps) => {
             className="shrink-0"
           >
             <img
-              src={item.snippet.thumbnails.medium.url}
+              src={item.snippet.thumbnails.medium?.url}
               alt={item.snippet.title}
               className="w-72 h-[162px] rounded-xl object-cover"
             />
@@ -60,4 +45,6 @@ export const VideoGrid = ({ query }: VideoGridProps) => {
       ))}
     </div>
   );
-};
+});
+
+VideoGrid.displayName = "VideoGrid";

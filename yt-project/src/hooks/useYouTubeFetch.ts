@@ -9,6 +9,10 @@ export const useYouTubeFetch = (query: string) => {
   const [error, setError] = useState<null | string>(null);
 
   useEffect(() => {
+    if (!API_KEY) {
+      throw new Error("VITE_YOUTUBE_API_KEY is not defined in .env");
+    }
+
     const controller = new AbortController();
 
     const fetchData = async () => {
@@ -21,7 +25,7 @@ export const useYouTubeFetch = (query: string) => {
         );
         if (!res.ok) throw new Error("Помилка при запиті");
         const json = await res.json();
-        setData(json.items);
+        setData(json.items || []);
       } catch (err: unknown) {
         if (err instanceof DOMException && err.name === "AbortError") return;
         setError(err instanceof Error ? err.message : "Невідома помилка");
