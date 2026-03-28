@@ -13,7 +13,7 @@ function App() {
   };
 
   return (
-    <div className="p-4 max-w-2xl mx-auto">
+    <div className="min-h-screen bg-[#0f0f0f] px-4 py-6 max-w-4xl mx-auto">
       <Input value={inputValue} onChange={handleInputChange} />
 
       <VideoGrid query={debouncedQuery} />
